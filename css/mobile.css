@@ -323,11 +323,20 @@
 
 /* ========== GAME BUTTON TAP TARGETS (mobile) ========== */
 @media (max-width: 768px) {
-    .game-btn {
-        padding: 12px 18px;
-        font-size: 1em;
-        min-height: 44px; /* Apple HIG minimum tap target */
-        min-width: 44px;
+    /* Make the top bar fill the full width and distribute buttons evenly */
+    .game-controls-top {
+        justify-content: stretch;
+        gap: 8px;
+        padding: 8px 10px;
+    }
+    .game-controls-top .game-btn {
+        flex: 1;
+        padding: 8px 4px;
+        font-size: 0.8em;
+        letter-spacing: 0;
+        text-align: center;
+        min-height: 40px;
+        min-width: 0; /* allow shrinking below default min-width */
     }
     /* Add breathing room at bottom of canvas so fixed controls don't overlap */
     .canvas-container {

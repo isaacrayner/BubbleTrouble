@@ -188,9 +188,11 @@
     box-shadow: none;
     backdrop-filter: none;
     min-width: auto;
+    width: 95vw;
     max-width: 95vw;
     max-height: 95vh;
-    overflow-y: visible;
+    overflow-y: auto;
+    overflow-x: hidden;
     box-sizing: border-box;
 }
 

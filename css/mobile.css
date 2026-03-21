@@ -101,14 +101,11 @@
     .player-avatar { font-size: 1.5rem; }
     .mode-title { font-size: 0.8rem; }
     .mode-subtitle { font-size: 0.65rem; }
-    .mode-buttons-container { 
-        gap: 8px; 
+    .mode-buttons-container {
+        gap: 8px;
         margin-top: 10px;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 10px;
-        justify-content: flex-start;
+        flex-wrap: wrap;
+        justify-content: center;
     }
     .game-title-container { margin-bottom: 10px; }
     
@@ -244,20 +241,30 @@
     .game-title { font-size: 1.3rem; }
     .subtitle { font-size: 0.7rem; }
     .mode-selection-prompt { font-size: 0.8rem; }
-    .player-mode-button { 
-        min-width: 140px; 
-        max-width: 180px;
-        padding: 10px 8px;
-    }
-    .mode-icon { height: 30px; margin-bottom: 4px; }
-    .player-avatar { font-size: 1.4rem; }
-    .mode-title { font-size: 0.75rem; }
-    .mode-subtitle { font-size: 0.6rem; }
-    .mode-buttons-container { 
-        flex-direction: row; 
+    .player-mode-button {
+        min-width: 0;
+        width: 85%;
+        max-width: 280px;
+        padding: 10px 16px;
+        display: flex;
+        flex-direction: row;
         align-items: center;
-        gap: 8px; 
-        margin-top: 8px; 
+        gap: 12px;
+        text-align: left;
+    }
+    .mode-icon {
+        height: auto;
+        margin-bottom: 0;
+        flex-shrink: 0;
+    }
+    .player-avatar { font-size: 1.6rem; }
+    .mode-title { font-size: 0.85rem; }
+    .mode-subtitle { font-size: 0.65rem; }
+    .mode-buttons-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
     }
     .game-title-container { margin-bottom: 8px; }
     

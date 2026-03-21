@@ -1,5 +1,3 @@
-console.log("=== GAME.JS LOADING ===");
-
 // Function cache - validate once at startup instead of every frame
 const gameFunctions = {};
 
@@ -17,7 +15,7 @@ function validateGameFunctions() {
     gameFunctions.drawEverything = typeof drawEverything === 'function';
     gameFunctions.playSound = typeof playSound === 'function';
     gameFunctions.initializeSounds = typeof initializeSounds === 'function';
-    gameFunctions.clearBubbleSpeedEffects = typeof clearBubbleSpeedEffects === 'function';
+    gameFunctions.resetBubbleSpeedEffect = typeof resetBubbleSpeedEffect === 'function';
     gameFunctions.clearAllRescueBubbles = typeof clearAllRescueBubbles === 'function';
     gameFunctions.resetBubbleSpeed = typeof resetBubbleSpeed === 'function';
     gameFunctions.removePowerUp = typeof removePowerUp === 'function';
@@ -27,9 +25,10 @@ function validateGameFunctions() {
     gameFunctions.initializeLevelBubbles = typeof initializeLevelBubbles === 'function';
     gameFunctions.clearCanvas = typeof clearCanvas === 'function';
     gameFunctions.createPowerUp = typeof createPowerUp === 'function';
-    
-    console.log('Game functions validated:', Object.keys(gameFunctions).filter(k => gameFunctions[k]).length, '/', Object.keys(gameFunctions).length);
-    
+    gameFunctions.handleInput = typeof handleInput === 'function';
+    gameFunctions.updateFloatingTexts = typeof updateFloatingTexts === 'function';
+    gameFunctions.clearAllPlayerPowerUps = typeof clearAllPlayerPowerUps === 'function';
+
     // Warn about missing critical functions
     if (!gameFunctions.createPowerUp) {
         console.error('CRITICAL: createPowerUp function not found! Powerups will not drop.');
@@ -45,8 +44,6 @@ function resizeCanvas() {
     // Fixed canvas size for consistent gameplay
     canvas.width = 1000;
     canvas.height = 800;
-    console.log("Canvas set to fixed size:", canvas.width, "x", canvas.height);
-
     // If mode select is visible, re-trigger animations
     const messageBox = document.getElementById('messageBox');
     if (messageBox && messageBox.style.display !== 'none') {
@@ -69,7 +66,6 @@ resizeCanvas();
 
 // Game initialization
 window.addEventListener('load', () => {
-    console.log('=== WINDOW LOADED - GAME STARTING ===');
     setupGame();
 });
 
@@ -143,7 +139,6 @@ function showModeSelectPrompt() {
                 
                 // Handle AI Co-Op mode (temporarily treat as single player until implemented)
                 if (selectedMode === 'ai-coop') {
-                    console.log('AI Co-Op mode selected - Initializing AI teammate!');
                     gameMode = 'ai-coop';
                 }
                 
@@ -253,6 +248,9 @@ function gameLoop(timestamp) {
         if (deltaTime > 3 || deltaTime <= 0) deltaTime = 1;
     }
     
+    // Cache current time once per frame for all subsystems
+    frameTime = Date.now();
+
     // Clear canvas using centralized function from ui.js
     if (gameFunctions.clearCanvas) {
         clearCanvas();
@@ -269,14 +267,14 @@ function gameLoop(timestamp) {
 
 // Consolidated update function - uses cached function validation
 function updateGameSystems() {
-    if (typeof handleInput === 'function') handleInput();
+    if (gameFunctions.handleInput) handleInput();
     if (gameFunctions.updatePlayers) updatePlayers();
     if (gameFunctions.updateBubbles) updateBubbles();
     if (gameFunctions.updateProjectiles) updateProjectiles();
     if (gameFunctions.updatePowerUps) updatePowerUps();
     if (gameFunctions.updateRescueBubbles) updateRescueBubbles();
     if (gameFunctions.updateParticles) updateParticles();
-    if (typeof updateFloatingTexts === 'function') updateFloatingTexts();
+    if (gameFunctions.updateFloatingTexts) updateFloatingTexts();
     if (gameFunctions.checkCollisions) checkCollisions();
     if (gameFunctions.checkRescueBubbleCollisions) checkRescueBubbleCollisions();
     if (gameMode === 'ai-coop' && typeof updateAI === 'function') updateAI();
@@ -292,30 +290,22 @@ function updateGameSystems() {
 
 // Start next level
 function startNextLevel() {
-    console.log('Starting next level...');
     clearGameObjects();
     
-    // Clear all power-up timers and effects using centralized function
-    if (gameFunctions.removePowerUp) {
-        if (player1.activePowerUp) removePowerUp(player1);
-        if (player2.activePowerUp) removePowerUp(player2);
-    }
-    
+    // Clear all power-up timers and effects
+    if (gameFunctions.clearAllPlayerPowerUps) clearAllPlayerPowerUps();
+
     // Clear bubble speed effects before level transition
-    if (gameFunctions.clearBubbleSpeedEffects) clearBubbleSpeedEffects();
+    if (gameFunctions.resetBubbleSpeedEffect) resetBubbleSpeedEffect();
     
     // Reset players for level transition (keeps lives, score, but resets power-ups and positions)
     if (gameFunctions.resetPlayers) {
         resetPlayers('level-transition');
     }
-    // Note: resetPlayerPowerUpsOnly already exists and handles non-cooldown/maxProjectiles resets.
-    
     initializeLevel();
     levelTransitioning = false;
     gameRunning = true;
     gamePaused = false;
-    
-    console.log(`Level ${currentLevel} started.`);
 }
 
 // Power-up timer clearing is now centralized in powerups.js removePowerUp() function
@@ -332,7 +322,6 @@ function checkGameOver() {
     }
 
     if (allPlayersOut && gameRunning) {
-        console.log('Game Over');
         gameRunning = false;
         gameOver = true;
         
@@ -341,11 +330,8 @@ function checkGameOver() {
             stopBackgroundMusic();
         }
         
-        // Clear all power-up timers using centralized function
-        if (gameFunctions.removePowerUp) {
-            if (player1.activePowerUp) removePowerUp(player1);
-            if (player2.activePowerUp) removePowerUp(player2);
-        }
+        // Clear all power-up timers
+        if (gameFunctions.clearAllPlayerPowerUps) clearAllPlayerPowerUps();
         
         // Clear rescue bubbles on game over
         if (gameFunctions.clearAllRescueBubbles) {
@@ -385,17 +371,13 @@ function showGameOverMessage() {
 
 // Start new game
 function startNewGame() {
-    console.log('Starting new game...');
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
     }
     
-    // Clear any lingering power-up timers using centralized function
-    if (gameFunctions.removePowerUp) {
-        if (player1.activePowerUp) removePowerUp(player1);
-        if (player2.activePowerUp) removePowerUp(player2);
-    }
+    // Clear any lingering power-up timers
+    if (gameFunctions.clearAllPlayerPowerUps) clearAllPlayerPowerUps();
     
     // Clear rescue bubbles on game restart
     if (gameFunctions.clearAllRescueBubbles) {
@@ -403,8 +385,8 @@ function startNewGame() {
     }
     
     // Clear bubble speed effects on new game
-    if (gameFunctions.clearBubbleSpeedEffects) {
-        clearBubbleSpeedEffects();
+    if (gameFunctions.resetBubbleSpeedEffect) {
+        resetBubbleSpeedEffect();
     }
     
     if (gameFunctions.resetBubbleSpeed) {
@@ -449,7 +431,6 @@ function startNewGame() {
     }
     
     animationFrameId = requestAnimationFrame(gameLoop);
-    console.log('New game started. All power-up timers and rescue bubbles cleared.');
 }
 
 // Helper functions
@@ -470,12 +451,9 @@ function initializeLevel() {
     // Obstacles are initialized in obstacles.js
     if (gameFunctions.initializeObstacles) {
         initializeObstacles();
-        console.log('Obstacles initialized for level', currentLevel);
     }
-    // Bubbles are initialized in levels.js
     if (gameFunctions.initializeLevelBubbles) {
         initializeLevelBubbles();
-        console.log('Bubbles initialized for level', currentLevel, '- Count:', bubbles.length);
     }
 }
 
@@ -538,4 +516,3 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-console.log("=== GAME.JS FULLY LOADED ===");

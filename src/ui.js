@@ -17,12 +17,10 @@ function showMessage(text, buttonText, callback) {
         
         // Add the new event listener
         newButton.addEventListener('click', () => {
-            console.log('Message button clicked:', buttonText);
             callback();
         });
-        
+
         gamePaused = true;
-        console.log('Message shown:', text);
     } else {
         console.error('Message elements not found!');
     }
@@ -34,7 +32,6 @@ function hideMessage() {
         messageBox.style.display = 'none';
         messageBox.classList.remove('has-message'); // Remove background styling
         gamePaused = false;
-        console.log('Message hidden, game unpaused');
     }
 }
 
@@ -61,7 +58,7 @@ function drawLevelInfo() {
     
     // Draw time challenge timer if active
     if (isTimeChallengeLevel && levelTimeLimit > 0 && gameRunning) {
-        const elapsed = (Date.now() - levelStartTime) / 1000;
+        const elapsed = (frameTime - levelStartTime) / 1000;
         const remaining = Math.max(0, levelTimeLimit - elapsed);
         const timeColor = remaining < 10 ? '#ff6b6b' : (remaining < 20 ? '#fbbf24' : '#4ade80');
         
@@ -106,7 +103,7 @@ function drawLevelInfo() {
     let p1PowerUpY = 80;
     if (player1.active && player1.activePowerUp && player1.powerUpEndTime) {
         ctx.textAlign = 'left';
-        const timeLeft = Math.max(0, Math.ceil((player1.powerUpEndTime - Date.now()) / 1000));
+        const timeLeft = Math.max(0, Math.ceil((player1.powerUpEndTime - frameTime) / 1000));
         let powerUpColor = getPowerUpColor(player1.activePowerUp);
         if (player1.activePowerUp === 'shield') {
             powerUpColor = '#60a5fa';
@@ -130,7 +127,7 @@ function drawLevelInfo() {
     if ((gameMode === 'multi' || gameMode === 'ai-coop') && player2.active && player2.activePowerUp && player2.powerUpEndTime) {
         let p2PowerUpY = 80;
         ctx.textAlign = 'right';
-        const timeLeft = Math.max(0, Math.ceil((player2.powerUpEndTime - Date.now()) / 1000));
+        const timeLeft = Math.max(0, Math.ceil((player2.powerUpEndTime - frameTime) / 1000));
         let powerUpColor = getPowerUpColor(player2.activePowerUp);
         if (player2.activePowerUp === 'shield') {
             powerUpColor = '#60a5fa';
@@ -160,81 +157,50 @@ function drawEverything() {
     if (gameMode === 'ai-coop' && typeof drawAIIndicator === 'function') drawAIIndicator();
 }
 
-function resetPlayerPowerUps() {
-    // Clear all active power-ups and reset to defaults
-    players.forEach(playerObj => {
-        console.log(`Resetting power-ups for Player ${playerObj.id}`);
-        
-        playerObj.activePowerUp = null;
-        playerObj.currentProjectileWidth = PROJECTILE_WIDTH;
-        playerObj.shootCooldown = 250;
-        playerObj.maxProjectiles = MAX_PROJECTILES_PER_PLAYER;
-        playerObj.hasShield = false;
-        playerObj.invincible = false;
-        playerObj.powerUpEndTime = null;
-        
-        // Note: We don't clear powerUpTimer here since we're using powerUpEndTime for tracking
-    });
-    
-    console.log('All player power-ups reset');
-}
-
-// Time challenge functions
-function showTimeChallengeIntro(callback) {
+// Shared helper: creates a full-screen overlay, auto-dismisses after displayMs, then calls callback.
+function showGameOverlay(id, bgColor, contentHTML, contentStyle, displayMs, fadeOutMs, callback) {
     const overlay = document.createElement('div');
-    overlay.id = 'timeChallengeOverlay';
+    overlay.id = id;
     overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        animation: fadeIn 0.3s ease-out;
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: ${bgColor};
+        display: flex; align-items: center; justify-content: center;
+        z-index: 10000; animation: fadeIn 0.3s ease-out;
     `;
-    
+
     const content = document.createElement('div');
-    content.style.cssText = `
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 40px 60px;
-        border-radius: 20px;
-        text-align: center;
-        animation: bounceIn 0.5s ease-out;
-        border: 4px solid #fbbf24;
-        box-shadow: 0 0 40px rgba(251, 191, 36, 0.6);
-    `;
-    
-    content.innerHTML = `
-        <div style="font-size: 60px; margin-bottom: 20px;">⏱️</div>
-        <div style="font-size: 36px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
-            TIME CHALLENGE!
-        </div>
-        <div style="font-size: 24px; color: #fff; margin-bottom: 20px;">
-            Complete in ${levelTimeLimit} seconds<br>
-            for BONUS POINTS!
-        </div>
-        <div style="font-size: 18px; color: #fbbf24; animation: pulse 1s infinite;">
-            Get ready...
-        </div>
-    `;
-    
+    content.style.cssText = contentStyle;
+    content.innerHTML = contentHTML;
+
     overlay.appendChild(content);
     document.body.appendChild(overlay);
-
     gamePaused = true;
-    
+
     setTimeout(() => {
-        overlay.style.animation = 'fadeOut 0.3s ease-out';
+        overlay.style.animation = `fadeOut ${fadeOutMs / 1000}s ease-out`;
         setTimeout(() => {
             overlay.remove();
             gamePaused = false;
             if (callback) callback();
-        }, 300);
-    }, 3000);
+        }, fadeOutMs);
+    }, displayMs);
+}
+
+// Time challenge functions
+function showTimeChallengeIntro(callback) {
+    showGameOverlay(
+        'timeChallengeOverlay',
+        'rgba(0,0,0,0.8)',
+        `<div style="font-size: 60px; margin-bottom: 20px;">⏱️</div>
+         <div style="font-size: 36px; font-weight: bold; color: #fbbf24; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">TIME CHALLENGE!</div>
+         <div style="font-size: 24px; color: #fff; margin-bottom: 20px;">Complete in ${levelTimeLimit} seconds<br>for BONUS POINTS!</div>
+         <div style="font-size: 18px; color: #fbbf24; animation: pulse 1s infinite;">Get ready...</div>`,
+        `background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+         padding: 40px 60px; border-radius: 20px; text-align: center;
+         animation: bounceIn 0.5s ease-out; border: 4px solid #fbbf24;
+         box-shadow: 0 0 40px rgba(251, 191, 36, 0.6);`,
+        3000, 300, callback
+    );
 }
 
 function handleTimeChallengeFailure() {
@@ -250,54 +216,15 @@ function handleTimeChallengeFailure() {
 }
 
 function showBossIntro(callback) {
-    const overlay = document.createElement('div');
-    overlay.id = 'bossIntroOverlay';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        animation: fadeIn 0.5s ease-out;
-    `;
-    
-    const content = document.createElement('div');
-    content.style.cssText = `
-        text-align: center;
-        animation: shakeIntro 0.8s ease-out;
-    `;
-    
-    content.innerHTML = `
-        <div style="font-size: 100px; margin-bottom: 20px; animation: pulse 1s infinite;">👾</div>
-        <div style="font-size: 48px; font-weight: bold; color: #ff6b6b; margin-bottom: 10px; text-shadow: 3px 3px 6px rgba(0,0,0,0.8); animation: glowRed 1s infinite;">
-            ⚠️ BOSS LEVEL ⚠️
-        </div>
-        <div style="font-size: 28px; color: #fbbf24; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
-            MEGA BUBBLE INCOMING!
-        </div>
-        <div style="font-size: 20px; color: #fff;">
-            Defeat the giant bubble to continue!
-        </div>
-    `;
-    
-    overlay.appendChild(content);
-    document.body.appendChild(overlay);
-
-    gamePaused = true;
-    
-    setTimeout(() => {
-        overlay.style.animation = 'fadeOut 0.5s ease-out';
-        setTimeout(() => {
-            overlay.remove();
-            gamePaused = false;
-            if (callback) callback();
-        }, 500);
-    }, 4000);
+    showGameOverlay(
+        'bossIntroOverlay',
+        'rgba(0,0,0,0.9)',
+        `<div style="font-size: 100px; margin-bottom: 20px; animation: pulse 1s infinite;">👾</div>
+         <div style="font-size: 48px; font-weight: bold; color: #ff6b6b; margin-bottom: 10px; text-shadow: 3px 3px 6px rgba(0,0,0,0.8); animation: glowRed 1s infinite;">⚠️ BOSS LEVEL ⚠️</div>
+         <div style="font-size: 28px; color: #fbbf24; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">MEGA BUBBLE INCOMING!</div>
+         <div style="font-size: 20px; color: #fff;">Defeat the giant bubble to continue!</div>`,
+        `text-align: center; animation: shakeIntro 0.8s ease-out;`,
+        4000, 500, callback
+    );
 }
 
-console.log("=== UI.JS LOADED ===");

@@ -60,14 +60,14 @@ class RescueBubble {
         this.pulsePhase += 0.15;
 
         // Check if expired
-        return Date.now() < this.expiresAt && !this.collected;
+        return frameTime < this.expiresAt && !this.collected;
     }
 
     draw() {
         ctx.save();
         
         // Pulsing effect based on remaining time
-        const timeLeft = this.expiresAt - Date.now();
+        const timeLeft = this.expiresAt - frameTime;
         const urgency = 1 - (timeLeft / RESCUE_BUBBLE_DURATION);
         const pulseIntensity = 0.8 + 0.2 * Math.sin(this.pulsePhase);
         
@@ -150,29 +150,20 @@ class RescueBubble {
 function createRescueBubble(deadPlayer) {
     // Only create if the other player is still alive
     const alivePlayer = deadPlayer.id === 1 ? player2 : player1;
-    if (!alivePlayer.active) {
-        console.log('Both players dead, no rescue bubble created');
-        return;
-    }
+    if (!alivePlayer.active) return;
 
     // Don't create if one already exists for this player
-    if (rescueBubbles.some(bubble => bubble.targetPlayerId === deadPlayer.id)) {
-        console.log(`Rescue bubble already exists for Player ${deadPlayer.id}`);
-        return;
-    }
+    if (rescueBubbles.some(bubble => bubble.targetPlayerId === deadPlayer.id)) return;
 
     // Create rescue bubble near center of screen
     const x = canvas.width/2 + (Math.random() - 0.5) * 200;
     const y = canvas.height/2 + (Math.random() - 0.5) * 200;
-    
-    const rescueBubble = new RescueBubble(x, y, deadPlayer.id);
-    rescueBubbles.push(rescueBubble);
-    
-    console.log(`Rescue bubble created for Player ${deadPlayer.id}`);
-    
+
+    rescueBubbles.push(new RescueBubble(x, y, deadPlayer.id));
+
     // Play special sound
     if (typeof playSound === 'function') {
-        playSound('powerup'); // Use powerup sound or create a special rescue sound
+        playSound('powerup');
     }
 }
 
@@ -181,11 +172,7 @@ function updateRescueBubbles() {
         const bubble = rescueBubbles[i];
         
         if (!bubble.update()) {
-            // Bubble expired or was collected
             rescueBubbles.splice(i, 1);
-            if (!bubble.collected) {
-                console.log(`Rescue bubble for Player ${bubble.targetPlayerId} expired`);
-            }
         }
     }
 }
@@ -258,7 +245,6 @@ function checkProjectileRescueBubbleCollision(projectile) {
                 createParticles(bubble.x, bubble.y, '#ffd700', 15);
             }
             
-            console.log(`Rescue bubble shot by projectile! Player ${bubble.targetPlayerId} rescued!`);
             return true; // Projectile hit something
         }
     }
@@ -267,11 +253,8 @@ function checkProjectileRescueBubbleCollision(projectile) {
 
 function rescuePlayer(playerId) {
     const playerToRescue = playerId === 1 ? player1 : player2;
-    
-    if (playerToRescue.active) {
-        console.log(`Player ${playerId} is already alive!`);
-        return;
-    }
+
+    if (playerToRescue.active) return;
     
     // Bring player back to life
     playerToRescue.active = true;
@@ -290,17 +273,16 @@ function rescuePlayer(playerId) {
     // Clear any projectiles
     playerToRescue.projectiles = [];
     
-    // Remove invincibility after 2 seconds
-    setTimeout(() => {
+    // Remove invincibility after 2 seconds (tracked to allow cleanup on death)
+    if (playerToRescue.invincibilityTimer) {
+        clearTimeout(playerToRescue.invincibilityTimer);
+    }
+    playerToRescue.invincibilityTimer = setTimeout(() => {
         playerToRescue.invincible = false;
+        playerToRescue.invincibilityTimer = null;
     }, 2000);
-    
-    console.log(`Player ${playerId} has been rescued! Lives: ${playerToRescue.lives}`);
 }
 
 function clearAllRescueBubbles() {
     rescueBubbles.length = 0;
-    console.log('All rescue bubbles cleared');
 }
-
-console.log("=== RESCUE.JS LOADED ===");

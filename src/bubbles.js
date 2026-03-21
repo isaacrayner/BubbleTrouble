@@ -308,7 +308,6 @@ function updateBubbles() {
         const bubble = bubbles[i];
         
         if (!bubble || typeof bubble.update !== 'function') {
-            console.warn(`Invalid bubble at index ${i}:`, bubble);
             bubbles.splice(i, 1);
             continue;
         }
@@ -324,9 +323,8 @@ function updateBubbles() {
         handleEnhancedBubbleBouncing(bubble, prevX, prevY);
         
         // Remove bubbles that are stuck or invalid
-        if (!isFinite(bubble.x) || !isFinite(bubble.y) || 
+        if (!isFinite(bubble.x) || !isFinite(bubble.y) ||
             !isFinite(bubble.dx) || !isFinite(bubble.dy)) {
-            console.warn(`Removing invalid bubble:`, bubble);
             bubbles.splice(i, 1);
         }
     }
@@ -490,7 +488,4 @@ function setBubbleSpeedForLevel(level) {
     const levelBonus = (level - 1) * 0.3; // Gradual increase per level
     BUBBLE_SPEED = BUBBLE_BASE_SPEED + levelBonus;
     
-    console.log(`Level ${level} bubble speed set to: ${BUBBLE_SPEED}`);
 }
-
-console.log("=== BUBBLES.JS LOADED ===");

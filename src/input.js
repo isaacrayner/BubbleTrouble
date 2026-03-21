@@ -93,74 +93,67 @@ function setupMobileControls() {
     }
 
     // Show mobile controls only on touch devices
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-        mobileControls.style.display = 'flex';
+    if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        return;
+    }
+    mobileControls.style.display = 'flex';
+
+    // Use pointer events so multiple simultaneous touches work correctly.
+    // setPointerCapture ensures pointerup/pointercancel always fire on the
+    // same element even if the finger slides off, preventing stuck keys.
+
+    function setupMoveButton(btn, keyCode) {
+        btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            btn.setPointerCapture(e.pointerId);
+            keys[keyCode] = true;
+            btn.classList.add('pressed');
+            if (e.pointerType === 'touch') triggerHapticFeedback(30);
+        });
+        btn.addEventListener('pointerup', (e) => {
+            e.preventDefault();
+            keys[keyCode] = false;
+            btn.classList.remove('pressed');
+        });
+        btn.addEventListener('pointercancel', () => {
+            keys[keyCode] = false;
+            btn.classList.remove('pressed');
+        });
     }
 
-    // Touch controls for movement
-    leftBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        keys['ArrowLeft'] = true;
-        addButtonPressEffect(leftBtn);
-        triggerHapticFeedback(30);
-    });
-    
-    leftBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        keys['ArrowLeft'] = false;
-    });
+    setupMoveButton(leftBtn, 'ArrowLeft');
+    setupMoveButton(rightBtn, 'ArrowRight');
 
-    rightBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        keys['ArrowRight'] = true;
-        addButtonPressEffect(rightBtn);
-        triggerHapticFeedback(30);
-    });
-    
-    rightBtn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        keys['ArrowRight'] = false;
-    });
+    // Shoot button — fires immediately on press, then continuously while held
+    let shootHoldInterval = null;
 
-    // Update mobile controls in setupMobileControls function
-    if (shootBtn) {
-        // Remove any existing listeners
-        shootBtn.removeEventListener('touchstart', handleMobileShoot);
-        shootBtn.removeEventListener('click', handleMobileShoot);
-        
-        // Add single-fire event listeners
-        shootBtn.addEventListener('touchstart', handleMobileShoot, { passive: false });
-        shootBtn.addEventListener('click', handleMobileShoot);
+    function fireMobileShot() {
+        if (player1.active && typeof shootProjectile === 'function') {
+            shootProjectile(player1);
+        }
     }
 
-    // Also add mouse support for testing
-    leftBtn.addEventListener('mousedown', () => {
-        keys['ArrowLeft'] = true;
-        addButtonPressEffect(leftBtn);
+    shootBtn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        shootBtn.setPointerCapture(e.pointerId);
+        shootBtn.classList.add('pressed');
+        if (e.pointerType === 'touch') triggerHapticFeedback(50);
+        fireMobileShot();
+        if (!shootHoldInterval) {
+            shootHoldInterval = setInterval(fireMobileShot, 150);
+        }
     });
-    leftBtn.addEventListener('mouseup', () => keys['ArrowLeft'] = false);
-    
-    rightBtn.addEventListener('mousedown', () => {
-        keys['ArrowRight'] = true;
-        addButtonPressEffect(rightBtn);
+    shootBtn.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        shootBtn.classList.remove('pressed');
+        clearInterval(shootHoldInterval);
+        shootHoldInterval = null;
     });
-    rightBtn.addEventListener('mouseup', () => keys['ArrowRight'] = false);
-    
-    shootBtn.addEventListener('mousedown', () => {
-        keys['ArrowUp'] = true;
-        addButtonPressEffect(shootBtn);
+    shootBtn.addEventListener('pointercancel', () => {
+        shootBtn.classList.remove('pressed');
+        clearInterval(shootHoldInterval);
+        shootHoldInterval = null;
     });
-    shootBtn.addEventListener('mouseup', () => keys['ArrowUp'] = false);
-}
-
-function handleMobileShoot(e) {
-    e.preventDefault();
-    addButtonPressEffect(document.getElementById('shootBtn'));
-    triggerHapticFeedback(50);
-    // Mobile controls typically control Player 1
-    if (player1.active && typeof shootProjectile === 'function') {
-        shootProjectile(player1);
-    }
 }
 
 console.log("=== INPUT.JS LOADED ===");

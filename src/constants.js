@@ -19,6 +19,7 @@ let isTimeChallengeLevel = false;
 let lastFrameTime = 0;
 const targetFPS = 60; // Target 60 FPS for delta time calculation
 let deltaTime = 1; // Delta time multiplier (1 = normal speed at 60fps)
+let frameTime = 0; // Cached Date.now() for current frame - set once per frame in gameLoop
 
 // ========== GAME OBJECTS ARRAYS ==========
 let bubbles = [];
@@ -85,6 +86,7 @@ let player1 = {
     maxProjectiles: 6,
     hasShield: false,
     invincible: false,
+    invincibilityTimer: null,
     projectileSpeedMultiplier: 1
 };
 
@@ -111,6 +113,7 @@ let player2 = {
     maxProjectiles: 6,
     hasShield: false,
     invincible: false,
+    invincibilityTimer: null,
     projectileSpeedMultiplier: 1
 };
 

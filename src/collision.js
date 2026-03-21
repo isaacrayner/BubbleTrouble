@@ -117,17 +117,9 @@ function checkPowerUpCollisions() {
                 
                 // Remove power-up
                 powerUps.splice(i, 1);
-                console.log(`Player ${playerObj.id} collected ${powerUp.type} power-up!`);
             }
         }
     });
-}
-
-function playerCollidesWithPowerUp(playerObj, powerUp) {
-    return playerObj.x < powerUp.x + powerUp.width &&
-           playerObj.x + playerObj.width > powerUp.x &&
-           playerObj.y < powerUp.y + powerUp.height &&
-           playerObj.y + playerObj.height > powerUp.y;
 }
 
 // Add this function to your collision.js file
@@ -163,34 +155,41 @@ function handlePlayerHit(player, bubble) {
     if (player.hasShield || player.invincible) {
         return; // Player is protected
     }
-    
+
     player.lives--;
-    
+
     if (player.lives <= 0) {
         player.active = false;
-        console.log(`Player ${player.id} is out of lives!`);
-        
+        // Clear any pending invincibility timer since the player is now dead
+        if (player.invincibilityTimer) {
+            clearTimeout(player.invincibilityTimer);
+            player.invincibilityTimer = null;
+        }
+
         // Create rescue bubble when player dies
         if (typeof createRescueBubble === 'function') {
             createRescueBubble(player);
         }
     } else {
         // Player still has lives, make them invincible briefly
+        if (player.invincibilityTimer) {
+            clearTimeout(player.invincibilityTimer);
+        }
         player.invincible = true;
-        setTimeout(() => {
+        player.invincibilityTimer = setTimeout(() => {
             player.invincible = false;
+            player.invincibilityTimer = null;
         }, 1500);
     }
-    
+
     // Play hit sound
     if (typeof playSound === 'function') {
         playSound('hit');
     }
-    
+
     // Create hit particles
     if (typeof createParticles === 'function') {
         createParticles(player.x + player.width/2, player.y + player.height/2, '#ff4444', 10);
     }
 }
 
-console.log("=== COLLISION.JS LOADED ===");

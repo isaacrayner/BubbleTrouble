@@ -6,7 +6,6 @@ const activeTimers = new Set();
 function clearAllActiveTimers() {
     activeTimers.forEach(timerId => clearTimeout(timerId));
     activeTimers.clear();
-    console.log('All active power-up timers cleared');
 }
 
 // Update powerup timer displays for all players
@@ -43,57 +42,50 @@ function createPowerUp(x, y) {
         lifeTime: 15000
     };
     powerUps.push(powerUp);
-    console.log(`Created ${type} power-up at (${x}, ${y})`);
 }
 
 function updatePowerUps() {
     // Update power-up physics and animations
     for (let i = powerUps.length - 1; i >= 0; i--) {
         const powerUp = powerUps[i];
-        
+
         // Update animation
         if (powerUp.pulsePhase !== undefined) {
             powerUp.pulsePhase += 0.1;
         }
-        
+
         // Apply physics - movement and gravity
         powerUp.x += powerUp.dx;
         powerUp.y += powerUp.dy;
         powerUp.dy += 0.5; // Gravity
         powerUp.dx *= 0.98; // Air resistance
-        
+
         // Bounce off canvas edges
         if (powerUp.x <= 0 || powerUp.x + powerUp.width >= canvas.width) {
             powerUp.dx *= -0.7;
             powerUp.x = Math.max(0, Math.min(canvas.width - powerUp.width, powerUp.x));
         }
-        
+
         // Bounce off ground
         if (powerUp.y + powerUp.height >= canvas.height) {
             powerUp.y = canvas.height - powerUp.height;
             powerUp.dy *= -0.6;
             powerUp.dx *= 0.8;
-            
+
             // Stop bouncing if velocity is too low
             if (Math.abs(powerUp.dy) < 1) {
                 powerUp.dy = 0;
             }
         }
-        
-        // Remove power-ups that are too old
-        if (Date.now() - powerUp.createdAt > powerUp.lifeTime) {
+
+        // Remove power-ups that are too old (use frameTime cached once per frame)
+        if (frameTime - powerUp.createdAt > powerUp.lifeTime) {
             powerUps.splice(i, 1);
-            continue;
         }
     }
-    
-    // Handle power-up expiration for players
-    players.forEach(player => {
-        if (player.powerUpEndTime && Date.now() > player.powerUpEndTime) {
-            removePowerUp(player);
-            console.log(`Power-up ${player.activePowerUp} expired for player ${player.id}`);
-        }
-    });
+    // Note: individual power-up expiration is handled by the setTimeout in applyPowerUp.
+    // No frame-by-frame check needed here — it caused a race condition where removePowerUp()
+    // could clear ALL power-ups while only one had expired.
 }
 
 function drawPowerUps() {
@@ -162,61 +154,40 @@ function playerCollidesWithPowerUp(player, p) {
            player.y < p.y + p.height && player.y + player.height > p.y;
 }
 
-function collectPowerUp(player, powerUp) {
-    console.log('Powerup collected:', powerUp.type); // Debug line
-    
-    // Add debugging for sound function
-    console.log('playSound function exists:', typeof playSound);
-    console.log('playSound function:', playSound);
-    
-    applyPowerUp(player, powerUp.type);
-    
-    if (typeof playSound === 'function') {
-        console.log('Attempting to play powerup sound...');
-        playSound('powerup');
-        console.log('playSound called');
-    } else {
-        console.error('playSound is not a function!', typeof playSound);
-    }
-}
-
 function applyPowerUp(player, type) {
-    console.log(`Applying powerup ${type} to Player ${player.id}`);
-    
     // Initialize activePowerUps array if it doesn't exist
     if (!player.activePowerUps) {
         player.activePowerUps = [];
     }
-    
+
     // Handle extra_life immediately (instant effect)
     if (type === 'extra_life') {
         player.lives++;
-        console.log(`Player ${player.id} gained extra life, now has ${player.lives} lives`);
         return;
     }
-    
+
     let specificDuration = POWER_UP_DURATION; // Default duration
-    
+
     // Apply the powerup effect
     switch (type) {
         case 'rapid_fire':
             player.shootCooldown = 80;
             player.maxProjectiles = RAPID_FIRE_MAX_PROJECTILES;
             break;
-            
+
         case 'wide_shot':
             player.currentProjectileWidth = PROJECTILE_WIDTH * 5;
             break;
-            
+
         case 'shield':
             player.hasShield = true;
             break;
-            
+
         case 'slowBubbles':
             slowAllBubbles();
             specificDuration = 3000;
             break;
-            
+
         case 'fastBullets':
             player.projectileSpeedMultiplier = 5;
             break;
@@ -224,15 +195,15 @@ function applyPowerUp(player, type) {
             player.speed = PLAYER_SPEED * 2.5;
             break;
     }
-    
+
     // Create powerup entry with timer
     const endTime = Date.now() + specificDuration;
     const timer = setTimeout(() => {
         removeSpecificPowerUp(player, type);
     }, specificDuration);
-    
+
     activeTimers.add(timer);
-    
+
     // Add to active powerups
     player.activePowerUps.push({
         type: type,
@@ -240,62 +211,58 @@ function applyPowerUp(player, type) {
         timer: timer,
         duration: specificDuration
     });
-    
+
     // Keep legacy activePowerUp for backward compatibility (use first powerup)
     player.activePowerUp = type;
     player.powerUpEndTime = endTime;
     player.currentPowerUpDuration = specificDuration;
-    
+
     // Show power-up timer UI
     if (typeof showPowerUpTimer === 'function') {
         showPowerUpTimer(player, type);
-        console.log(`Timer shown for ${type} powerup`);
     }
 }
 
 function removeSpecificPowerUp(player, type) {
-    console.log(`Removing specific powerup ${type} from Player ${player.id}`);
-    
     if (!player.activePowerUps) return;
-    
+
     // Find and remove the powerup from the array
     const index = player.activePowerUps.findIndex(p => p.type === type);
     if (index === -1) return;
-    
+
     const powerup = player.activePowerUps[index];
-    
-    // Clear the timer
+
+    // Clear the timer and remove from tracking set
     if (powerup.timer) {
         clearTimeout(powerup.timer);
         activeTimers.delete(powerup.timer);
     }
-    
+
     // Remove from array
     player.activePowerUps.splice(index, 1);
-    
+
     // Handle specific cleanup - but only if this powerup isn't active anymore
     const stillActive = player.activePowerUps.some(p => p.type === type);
-    
+
     if (!stillActive) {
         switch (type) {
             case 'rapid_fire':
-                // Only reset if no other rapid_fire is active
                 player.shootCooldown = 250;
                 player.maxProjectiles = MAX_PROJECTILES_PER_PLAYER;
                 break;
-                
+
             case 'wide_shot':
                 player.currentProjectileWidth = PROJECTILE_WIDTH;
                 break;
-                
+
             case 'shield':
                 player.hasShield = false;
                 break;
-                
+
             case 'slowBubbles':
                 resetBubbleSpeedEffect();
                 break;
-                
+
             case 'fastBullets':
                 player.projectileSpeedMultiplier = 1;
                 break;
@@ -304,7 +271,7 @@ function removeSpecificPowerUp(player, type) {
                 break;
         }
     }
-    
+
     // Update legacy fields for backward compatibility
     if (player.activePowerUps.length > 0) {
         const mostRecent = player.activePowerUps[player.activePowerUps.length - 1];
@@ -314,7 +281,7 @@ function removeSpecificPowerUp(player, type) {
         player.activePowerUp = null;
         player.powerUpEndTime = null;
     }
-    
+
     // Hide timer if no powerups remain
     if (player.activePowerUps.length === 0 && typeof hidePowerUpTimer === 'function') {
         hidePowerUpTimer(player.id);
@@ -322,18 +289,17 @@ function removeSpecificPowerUp(player, type) {
 }
 
 function removePowerUp(player) {
-    console.log(`Removing all powerups from Player ${player.id}`);
-    
     if (!player.activePowerUps) {
         player.activePowerUps = [];
     }
-    
-    // Clear all active powerups
+
+    // Clear all active powerups for this player via removeSpecificPowerUp so each type's
+    // cleanup runs and timers are individually removed from activeTimers.
     while (player.activePowerUps.length > 0) {
         const powerup = player.activePowerUps[0];
         removeSpecificPowerUp(player, powerup.type);
     }
-    
+
     // Reset all powerup-related properties
     player.activePowerUp = null;
     player.powerUpEndTime = null;
@@ -342,26 +308,15 @@ function removePowerUp(player) {
     player.maxProjectiles = MAX_PROJECTILES_PER_PLAYER;
     player.currentProjectileWidth = PROJECTILE_WIDTH;
     player.projectileSpeedMultiplier = 1;
-    
-    // Clear timer interval
-    if (player.timerInterval) {
-        clearInterval(player.timerInterval);
-        activeTimers.delete(player.timerInterval);
-        player.timerInterval = null;
-    }
-    
-    // Clear any existing timer
-    if (player.powerUpTimer) {
-        clearTimeout(player.powerUpTimer);
-        activeTimers.delete(player.powerUpTimer);
-        player.powerUpTimer = null;
-    }
-    
-    player.currentPowerUpDuration = null; // Clear the stored duration
+    player.currentPowerUpDuration = null;
+
     // Hide powerup timer UI
     hidePowerUpTimer(player.id);
-    
-    console.log(`All powerups removed and timer cleared for Player ${player.id}`);
+}
+
+// Remove all power-ups from every player (used at level transitions and game over)
+function clearAllPlayerPowerUps() {
+    players.forEach(player => removePowerUp(player));
 }
 
 // Store original speeds for proper restoration
@@ -370,14 +325,12 @@ let bubbleSlowEffectActive = false;
 
 function slowAllBubbles() {
     if (bubbleSlowEffectActive) {
-        console.log('Slow bubbles effect already active, skipping');
         return; // Prevent stacking
     }
-    
-    console.log('Applying slow bubbles effect');
+
     bubbleSlowEffectActive = true;
     originalBubbleSpeeds.clear(); // Clear any previous state
-    
+
     // Store original speeds, freeze bubbles, and mark as frozen
     bubbles.forEach(bubble => {
         originalBubbleSpeeds.set(bubble, {
@@ -388,22 +341,17 @@ function slowAllBubbles() {
         bubble.dy = 0;
         bubble.isFrozen = true;
     });
-    
-    console.log(`Slowed ${bubbles.length} bubbles`);
 }
 
+// Unfreeze bubbles and restore speeds.
+// Used both when the slowBubbles power-up expires AND on level transitions.
 function resetBubbleSpeedEffect() {
-    if (!bubbleSlowEffectActive) {
-        console.log('No slow effect active, skipping reset');
-        return;
-    }
-    
-    console.log('Resetting bubble speeds from slow effect');
+    if (!bubbleSlowEffectActive) return;
+
     bubbleSlowEffectActive = false;
-    
-    // Unfreeze bubbles and restore original speeds
+
     bubbles.forEach(bubble => {
-        if (bubble.isFrozen) { // Only act on bubbles that were marked as frozen
+        if (bubble.isFrozen) {
             bubble.isFrozen = false;
             const originalSpeed = originalBubbleSpeeds.get(bubble);
             if (originalSpeed) {
@@ -412,38 +360,14 @@ function resetBubbleSpeedEffect() {
             }
         }
     });
-    
-    // Clear stored speeds
-    originalBubbleSpeeds.clear();
-    console.log('Bubble speeds restored');
-}
 
-// Add cleanup function for level transitions
-function clearBubbleSpeedEffects() {
-    if (bubbleSlowEffectActive) {
-        console.log('Clearing bubble speed effects for level transition');
-        // Important: Also unfreeze any bubbles that might still be frozen
-        bubbles.forEach(bubble => {
-            if (bubble.isFrozen) {
-                bubble.isFrozen = false;
-                const originalSpeed = originalBubbleSpeeds.get(bubble);
-                if (originalSpeed) {
-                    bubble.dx = originalSpeed.dx;
-                    bubble.dy = originalSpeed.dy;
-                }
-            }
-        });
-        bubbleSlowEffectActive = false;
-        originalBubbleSpeeds.clear();
-    }
+    originalBubbleSpeeds.clear();
 }
 
 function showPowerUpTimer(player, powerUpType) {
-    console.log(`=== Showing powerup timer for Player ${player.id}: ${powerUpType} ===`);
-    
     // Find existing timer container or create one
     let containerElement = document.getElementById(`powerup-timer-container-${player.id}`);
-    
+
     if (!containerElement) {
         containerElement = document.createElement('div');
         containerElement.className = 'powerup-timer-container';
@@ -459,15 +383,15 @@ function showPowerUpTimer(player, powerUpType) {
         `;
         document.body.appendChild(containerElement);
     }
-    
+
     // Create individual timer element for this powerup
     const timerElement = document.createElement('div');
     timerElement.className = 'powerup-timer';
     timerElement.id = `powerup-timer-${player.id}-${powerUpType}`;
-    
+
     const powerUpName = getPowerUpDisplayName(powerUpType);
     const powerUpColor = getPowerUpColor(powerUpType);
-    
+
     timerElement.innerHTML = `
         <div class="powerup-timer-content">
             <div class="powerup-details">
@@ -479,170 +403,11 @@ function showPowerUpTimer(player, powerUpType) {
             </div>
         </div>
     `;
-    
+
     // Add to container
     containerElement.appendChild(timerElement);
-    
-    console.log('Timer element created for:', powerUpType);
-    
+
     return timerElement;
-}
-
-// Add this debug function to test the timer display
-function debugPowerUpTimer() {
-    console.log('=== Debug Powerup Timer ===');
-    
-    // Create a test timer without needing a real powerup
-    const testPlayer = { id: 1, powerUpEndTime: Date.now() + 10000 };
-    
-    const timerElement = document.createElement('div');
-    timerElement.className = 'powerup-timer';
-    timerElement.id = 'debug-timer';
-    
-    timerElement.innerHTML = `
-        <div class="powerup-timer-content">
-            <div class="powerup-details">
-                <div class="powerup-name">Debug Timer</div>
-                <div class="powerup-time">10.0s</div>
-                <div class="powerup-player">Player 1</div>
-            </div>
-            <div class="powerup-progress">
-                <div class="powerup-progress-bar" style="width: 100%; background: #ff6b6b;"></div>
-            </div>
-        </div>
-    `;
-    
-    timerElement.style.cssText = `
-        position: fixed !important;
-        top: 120px !important;
-        left: 20px !important;
-        background: linear-gradient(135deg, rgba(22, 33, 62, 0.95) 0%, rgba(83, 52, 131, 0.95) 100%) !important;
-        border: 2px solid rgba(83, 52, 131, 0.8) !important;
-        border-radius: 12px !important;
-        padding: 12px 16px !important;
-        color: white !important;
-        font-family: 'Inter', sans-serif !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        z-index: 999 !important;
-        backdrop-filter: blur(10px) !important;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6) !important;
-        min-width: 200px !important;
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    `;
-    
-    document.body.appendChild(timerElement);
-    
-    console.log('Debug timer created:', timerElement);
-    console.log('Timer in DOM:', document.getElementById('debug-timer'));
-    
-    // Remove after 5 seconds
-    setTimeout(() => {
-        if (timerElement.parentNode) {
-            timerElement.parentNode.removeChild(timerElement);
-        }
-    }, 5000);
-}
-
-function createTestTimer() {
-    console.log('Creating test timers for both players...');
-    
-    // Remove any existing test timers
-    document.querySelectorAll('[id^="test-timer"]').forEach(el => el.remove());
-    
-    // Create test timer for Player 1 (left side)
-    const testTimer1 = document.createElement('div');
-    testTimer1.id = 'test-timer-1';
-    testTimer1.className = 'powerup-timer';
-    testTimer1.innerHTML = `
-        <div class="powerup-timer-content">
-            <div class="powerup-details">
-                <div class="powerup-name">🔥 Test Timer</div>
-                <div class="powerup-time">5.0s</div>
-            </div>
-            <div class="powerup-player">Player 1</div>
-            <div class="powerup-progress">
-                <div class="powerup-progress-bar" style="width: 100%; background: #ff6b6b;"></div>
-            </div>
-        </div>
-    `;
-    
-    testTimer1.style.cssText = `
-        position: fixed !important;
-        top: 140px !important;
-        left: 20px !important;
-        background: linear-gradient(135deg, rgba(22, 33, 62, 0.95), rgba(83, 52, 131, 0.95)) !important;
-        border: 2px solid rgba(83, 52, 131, 0.8) !important;
-        border-radius: 20px !important;
-        padding: 16px 20px !important;
-        color: white !important;
-        font-family: 'Inter', sans-serif !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        z-index: 9999 !important;
-        backdrop-filter: blur(15px) !important;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(83, 52, 131, 0.4) !important;
-        min-width: 240px !important;
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    `;
-    
-    // Create test timer for Player 2 (right side)
-    const testTimer2 = document.createElement('div');
-    testTimer2.id = 'test-timer-2';
-    testTimer2.className = 'powerup-timer';
-    testTimer2.innerHTML = `
-        <div class="powerup-timer-content">
-            <div class="powerup-details">
-                <div class="powerup-name">⚡ Test Timer</div>
-                <div class="powerup-time">5.0s</div>
-            </div>
-            <div class="powerup-player">Player 2</div>
-            <div class="powerup-progress">
-                <div class="powerup-progress-bar" style="width: 100%; background: #4ecdc4;"></div>
-            </div>
-        </div>
-    `;
-    
-    testTimer2.style.cssText = `
-        position: fixed !important;
-        top: 140px !important;
-        right: 20px !important;
-        background: linear-gradient(135deg, rgba(22, 33, 62, 0.95), rgba(83, 52, 131, 0.95)) !important;
-        border: 2px solid rgba(83, 52, 131, 0.8) !important;
-        border-radius: 20px !important;
-        padding: 16px 20px !important;
-        color: white !important;
-        font-family: 'Inter', sans-serif !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        z-index: 9999 !important;
-        backdrop-filter: blur(15px) !important;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(83, 52, 131, 0.4) !important;
-        min-width: 240px !important;
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    `;
-    
-    document.body.appendChild(testTimer1);
-    document.body.appendChild(testTimer2);
-    
-    console.log('Test timers created:');
-    console.log('- Left timer (Player 1):', testTimer1.getBoundingClientRect());
-    console.log('- Right timer (Player 2):', testTimer2.getBoundingClientRect());
-    
-    // Remove after 5 seconds
-    setTimeout(() => {
-        testTimer1.remove();
-        testTimer2.remove();
-        console.log('Test timers removed');
-    }, 5000);
-    
-    return { testTimer1, testTimer2 };
 }
 
 function hidePowerUpTimer(playerId = null) {
@@ -673,30 +438,30 @@ function hidePowerUpTimer(playerId = null) {
 
 function updatePowerUpTimerDisplay(player, powerUpType) {
     const timerElement = document.getElementById(`powerup-timer-${player.id}-${powerUpType}`);
-    
+
     if (!player.activePowerUps) return;
-    
+
     // Find the powerup in the active list
     const powerup = player.activePowerUps.find(p => p.type === powerUpType);
-    
+
     if (!timerElement || !powerup) {
         return;
     }
-    
-    const timeLeft = Math.max(0, (powerup.endTime - Date.now()) / 1000);
+
+    const timeLeft = Math.max(0, (powerup.endTime - frameTime) / 1000);
     const totalDuration = powerup.duration / 1000;
     const progress = Math.max(0, (timeLeft / totalDuration) * 100);
-    
+
     const timeDisplay = timerElement.querySelector('.powerup-time');
     const progressBar = timerElement.querySelector('.powerup-progress-bar');
-    
+
     if (timeDisplay) {
         timeDisplay.textContent = `${timeLeft.toFixed(1)}s`;
     }
-    
+
     if (progressBar) {
         progressBar.style.width = `${progress}%`;
-        
+
         // Change color when time is running out
         if (timeLeft < 3) {
             progressBar.style.background = '#ef4444';
@@ -706,7 +471,7 @@ function updatePowerUpTimerDisplay(player, powerUpType) {
             timerElement.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(83, 52, 131, 0.4)';
         }
     }
-    
+
     // Hide when expired
     if (timeLeft <= 0) {
         timerElement.remove();
@@ -716,36 +481,36 @@ function updatePowerUpTimerDisplay(player, powerUpType) {
 // Update all active powerup timers for a player
 function updateAllPowerUpTimers(player) {
     if (!player.activePowerUps) return;
-    
+
     player.activePowerUps.forEach(powerup => {
         updatePowerUpTimerDisplay(player, powerup.type);
     });
 }
 
+const POWER_UP_DISPLAY_NAMES = {
+    'rapid_fire': 'Rapid Fire',
+    'wide_shot': 'Wide Shot',
+    'shield': 'Shield',
+    'extra_life': 'Extra Life',
+    'slowBubbles': 'Slow Bubbles',
+    'fastBullets': 'Fast Bullets',
+    'speed_boost': 'Speed Boost'
+};
+
 function getPowerUpDisplayName(type) {
-    const names = {
-        'rapid_fire': 'Rapid Fire',
-        'wide_shot': 'Wide Shot',
-        'shield': 'Shield',
-        'extra_life': 'Extra Life',
-        'slowBubbles': 'Slow Bubbles',
-        'fastBullets': 'Fast Bullets',
-        'speed_boost': 'Speed Boost'
-    };
-    return names[type] || 'Power Up';
+    return POWER_UP_DISPLAY_NAMES[type] || 'Power Up';
 }
+
+const POWER_UP_COLORS = {
+    'rapid_fire': '#ff6b6b',
+    'wide_shot': '#4ecdc4',
+    'shield': '#45b7d1',
+    'extra_life': '#f9ca24',
+    'slowBubbles': '#b388ff',
+    'fastBullets': '#10b981',
+    'speed_boost': '#f9ca24'
+};
 
 function getPowerUpColor(type) {
-    const colors = {
-        'rapid_fire': '#ff6b6b',
-        'wide_shot': '#4ecdc4',
-        'shield': '#45b7d1',
-        'extra_life': '#f9ca24',
-        'slowBubbles': '#b388ff',
-        'fastBullets': '#10b981',
-        'speed_boost': '#f9ca24'
-    };
-    return colors[type] || '#4ecdc4';
+    return POWER_UP_COLORS[type] || '#4ecdc4';
 }
-
-console.log("=== POWERUPS.JS LOADED ===");

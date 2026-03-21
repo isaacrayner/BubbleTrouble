@@ -144,20 +144,3 @@ function drawProjectiles() {
     });
 }
 
-function createProjectile(player) {
-    let speed = PROJECTILE_SPEED;
-    if (player.projectileSpeedMultiplier) {
-        speed *= player.projectileSpeedMultiplier;
-    }
-    const projectile = {
-        x: player.x + player.width / 2 - PROJECTILE_WIDTH / 2,
-        y: player.y,
-        width: player.currentProjectileWidth || PROJECTILE_WIDTH,
-        height: PROJECTILE_HEIGHT,
-        dy: -speed // Negative for upward movement
-    };
-    player.projectiles.push(projectile);
-    if (typeof playSound === 'function') playSound('shoot');
-}
-
-console.log("=== PROJECTILES.JS LOADED ===");

@@ -43,7 +43,6 @@ function toggleSound() {
             soundToggle.textContent = '🔊 Sound';
             soundToggle.classList.remove('audio-disabled');
             soundToggle.classList.remove('muted');
-            console.log('Sound enabled');
             // Resume background music if game is running
             if (gameRunning && backgroundMusic) {
                 playBackgroundMusic();
@@ -52,7 +51,6 @@ function toggleSound() {
             soundToggle.textContent = '🔇 Muted';
             soundToggle.classList.add('audio-disabled');
             soundToggle.classList.add('muted');
-            console.log('Sound disabled');
             // Pause background music
             stopBackgroundMusic();
         }
@@ -62,7 +60,6 @@ function toggleSound() {
 }
 
 function initializeSounds() {
-    console.log('Initializing sound system...');
     loadSound('shoot', 'media/shoot.wav');
     loadSound('pop', 'media/pop.wav');
     loadSound('hit', 'media/hit.wav');
@@ -77,16 +74,12 @@ function initializeSounds() {
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.3; // Set to 30% volume so it doesn't overpower sound effects
         backgroundMusic.preload = 'auto';
-        backgroundMusic.addEventListener('error', (e) => {
-            console.log('Background music not found or failed to load');
+        backgroundMusic.addEventListener('error', () => {
             backgroundMusic = null;
         });
     } catch (error) {
-        console.log('Failed to initialize background music');
         backgroundMusic = null;
     }
-    
-    console.log('Sound system initialized with', Object.keys(sounds).length, 'sounds');
 }
 
 function playBackgroundMusic() {
@@ -98,13 +91,9 @@ function playBackgroundMusic() {
         backgroundMusic.currentTime = 0;
         const playPromise = backgroundMusic.play();
         if (playPromise !== undefined) {
-            playPromise.catch(() => {
-                console.log('Background music autoplay blocked - will play after user interaction');
-            });
+            playPromise.catch(() => {});
         }
-    } catch (error) {
-        console.log('Failed to play background music');
-    }
+    } catch (error) {}
 }
 
 function stopBackgroundMusic() {
@@ -150,8 +139,12 @@ class Particle {
     }
 }
 
+const MAX_PARTICLES = 200;
+
 function createParticles(x, y, color, count = 8) {
-    for (let i = 0; i < count; i++) {
+    const available = MAX_PARTICLES - particles.length;
+    const toCreate = Math.min(count, available);
+    for (let i = 0; i < toCreate; i++) {
         particles.push(new Particle(x, y, color));
     }
 }
@@ -196,4 +189,3 @@ if (soundEnabled) {
     initializeSounds();
 }
 
-console.log("=== EFFECTS.JS LOADED ===");

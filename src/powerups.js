@@ -323,16 +323,12 @@ let originalBubbleSpeeds = new Map(); // Store original dx/dy for each bubble
 let bubbleSlowEffectActive = false;
 
 function slowAllBubbles() {
-    if (bubbleSlowEffectActive) {
-        return; // Prevent stacking
-    }
-
+    if (bubbleSlowEffectActive) return;
     bubbleSlowEffectActive = true;
     originalBubbleSpeeds.clear();
     bubbles.forEach(bubble => {
         originalBubbleSpeeds.set(bubble, { dx: bubble.dx, dy: bubble.dy });
-        bubble.dx *= 0.3;
-        bubble.dy *= 0.3;
+        bubble.isFrozen = true;
     });
 }
 
@@ -340,13 +336,11 @@ function resetBubbleSpeedEffect() {
     if (!bubbleSlowEffectActive) return;
     bubbleSlowEffectActive = false;
     bubbles.forEach(bubble => {
+        bubble.isFrozen = false;
         const originalSpeed = originalBubbleSpeeds.get(bubble);
         if (originalSpeed) {
             bubble.dx = originalSpeed.dx;
             bubble.dy = originalSpeed.dy;
-        } else {
-            bubble.dx *= 3.33;
-            bubble.dy *= 3.33;
         }
     });
     originalBubbleSpeeds.clear();

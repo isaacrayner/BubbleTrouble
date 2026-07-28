@@ -137,6 +137,21 @@ class Bubble {
             ctx.fill();
         }
         
+        // Freeze effect glow
+        if (this.isFrozen) {
+            const freezeGlow = ctx.createRadialGradient(
+                this.x, this.y, 0,
+                this.x, this.y, currentRadius + 12
+            );
+            freezeGlow.addColorStop(0, 'rgba(0, 240, 255, 0.7)');
+            freezeGlow.addColorStop(0.6, 'rgba(0, 180, 255, 0.4)');
+            freezeGlow.addColorStop(1, 'rgba(0, 180, 255, 0)');
+            ctx.fillStyle = freezeGlow;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, currentRadius + 12, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         // Outer glow
         const glowGradient = ctx.createRadialGradient(
             this.x, this.y, 0,
@@ -279,6 +294,14 @@ function handleBubbleHit(bubble, bubbleIndex, playerObj) {
         rightBubble.dx = explosiveForce + (Math.random() - 0.5) * 2;
         rightBubble.dy = -upwardForce + (Math.random() - 0.5) * 1;
         
+        // If time freeze is active, freeze new split bubbles
+        if (typeof bubbleSlowEffectActive !== 'undefined' && bubbleSlowEffectActive && typeof originalBubbleSpeeds !== 'undefined') {
+            originalBubbleSpeeds.set(leftBubble, { dx: leftBubble.dx, dy: leftBubble.dy });
+            originalBubbleSpeeds.set(rightBubble, { dx: rightBubble.dx, dy: rightBubble.dy });
+            leftBubble.isFrozen = true;
+            rightBubble.isFrozen = true;
+        }
+
         // Add both bubbles to the array
         bubbles.push(leftBubble, rightBubble);
         

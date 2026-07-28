@@ -404,7 +404,7 @@ function canAIShoot() {
     if (!aiPlayer || !aiPlayer.active) return false;
 
     const now = Date.now();
-    const timeSinceLastShot = now - (aiPlayer.lastShootTime || 0);
+    const timeSinceLastShot = now - (aiPlayer.lastShotTime || 0);
     return timeSinceLastShot >= aiPlayer.shootCooldown &&
            aiPlayer.projectiles.length < aiPlayer.maxProjectiles;
 }

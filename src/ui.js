@@ -101,45 +101,28 @@ function drawLevelInfo() {
     
     // Show active power-ups (canvas text, less prominent than DOM timers)
     let p1PowerUpY = 80;
-    if (player1.active && player1.activePowerUp && player1.powerUpEndTime) {
+    if (player1.active && player1.activePowerUps && player1.activePowerUps.length > 0) {
         ctx.textAlign = 'left';
-        const timeLeft = Math.max(0, Math.ceil((player1.powerUpEndTime - frameTime) / 1000));
-        let powerUpColor = getPowerUpColor(player1.activePowerUp);
-        if (player1.activePowerUp === 'shield') {
-            powerUpColor = '#60a5fa';
-        }
-        ctx.fillStyle = powerUpColor;
-        ctx.fillText(`P1 ${player1.activePowerUp.replace('_', ' ').toUpperCase()}: ${timeLeft}s`, 10, p1PowerUpY);
-        p1PowerUpY += 15;
-        if (player1.activePowerUp === 'shield' && player1.hasShield) {
-            ctx.fillStyle = '#60a5fa';
-            ctx.fillText(`P1 SHIELD ACTIVE`, 10, p1PowerUpY);
-            p1PowerUpY += 15;
-        }
+        player1.activePowerUps.forEach(pw => {
+            const timeLeft = Math.max(0, Math.ceil((pw.endTime - (typeof frameTime !== 'undefined' ? frameTime : Date.now())) / 1000));
+            const powerUpColor = typeof getPowerUpColor === 'function' ? getPowerUpColor(pw.type) : '#4ecdc4';
+            ctx.fillStyle = powerUpColor;
+            ctx.fillText(`P1 ${pw.type.replace('_', ' ').toUpperCase()}: ${timeLeft}s`, 10, p1PowerUpY);
+            p1PowerUpY += 16;
+        });
     }
 
-    // Add obstacle count for debugging
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.font = '14px Inter';
-    ctx.fillText(`Obstacles: ${obstacles.length}`, 10, 115);
-    
-    if ((gameMode === 'multi' || gameMode === 'ai-coop') && player2.active && player2.activePowerUp && player2.powerUpEndTime) {
+    if ((gameMode === 'multi' || gameMode === 'ai-coop') && player2.active && player2.activePowerUps && player2.activePowerUps.length > 0) {
         let p2PowerUpY = 80;
         ctx.textAlign = 'right';
-        const timeLeft = Math.max(0, Math.ceil((player2.powerUpEndTime - frameTime) / 1000));
-        let powerUpColor = getPowerUpColor(player2.activePowerUp);
-        if (player2.activePowerUp === 'shield') {
-            powerUpColor = '#60a5fa';
-        }
-        ctx.fillStyle = powerUpColor;
         const p2Label = gameMode === 'ai-coop' ? 'AI' : 'P2';
-        ctx.fillText(`${p2Label} ${player2.activePowerUp.replace('_', ' ').toUpperCase()}: ${timeLeft}s`, canvas.width - 10, p2PowerUpY);
-        p2PowerUpY += 15;
-        if (player2.activePowerUp === 'shield' && player2.hasShield) {
-            ctx.fillStyle = '#60a5fa';
-            ctx.fillText(`${p2Label} SHIELD ACTIVE`, canvas.width - 10, p2PowerUpY);
-        }
+        player2.activePowerUps.forEach(pw => {
+            const timeLeft = Math.max(0, Math.ceil((pw.endTime - (typeof frameTime !== 'undefined' ? frameTime : Date.now())) / 1000));
+            const powerUpColor = typeof getPowerUpColor === 'function' ? getPowerUpColor(pw.type) : '#4ecdc4';
+            ctx.fillStyle = powerUpColor;
+            ctx.fillText(`${p2Label} ${pw.type.replace('_', ' ').toUpperCase()}: ${timeLeft}s`, canvas.width - 10, p2PowerUpY);
+            p2PowerUpY += 16;
+        });
     }
 }
 

@@ -34,7 +34,7 @@ document.addEventListener('keydown', (event) => {
                 shootProjectile(player1);
             }
         }
-        if (event.code === 'KeyW' && (gameMode === 'multi' || gameMode === 'ai-coop') && player2.active) {
+        if (event.code === 'KeyW' && gameMode === 'multi' && player2.active) {
             if (typeof shootProjectile === 'function') {
                 shootProjectile(player2);
             }

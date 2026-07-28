@@ -83,9 +83,8 @@ function updatePowerUps() {
             powerUps.splice(i, 1);
         }
     }
-    // Note: individual power-up expiration is handled by the setTimeout in applyPowerUp.
-    // No frame-by-frame check needed here — it caused a race condition where removePowerUp()
-    // could clear ALL power-ups while only one had expired.
+    // Update active powerup timers & HUD
+    updatePlayerPowerUps();
 }
 
 function drawPowerUps() {
@@ -329,38 +328,27 @@ function slowAllBubbles() {
     }
 
     bubbleSlowEffectActive = true;
-    originalBubbleSpeeds.clear(); // Clear any previous state
-
-    // Store original speeds, freeze bubbles, and mark as frozen
+    originalBubbleSpeeds.clear();
     bubbles.forEach(bubble => {
-        originalBubbleSpeeds.set(bubble, {
-            dx: bubble.dx,
-            dy: bubble.dy
-        });
-        bubble.dx = 0;
-        bubble.dy = 0;
-        bubble.isFrozen = true;
+        originalBubbleSpeeds.set(bubble, { dx: bubble.dx, dy: bubble.dy });
+        bubble.dx *= 0.3;
+        bubble.dy *= 0.3;
     });
 }
 
-// Unfreeze bubbles and restore speeds.
-// Used both when the slowBubbles power-up expires AND on level transitions.
 function resetBubbleSpeedEffect() {
     if (!bubbleSlowEffectActive) return;
-
     bubbleSlowEffectActive = false;
-
     bubbles.forEach(bubble => {
-        if (bubble.isFrozen) {
-            bubble.isFrozen = false;
-            const originalSpeed = originalBubbleSpeeds.get(bubble);
-            if (originalSpeed) {
-                bubble.dx = originalSpeed.dx;
-                bubble.dy = originalSpeed.dy;
-            }
+        const originalSpeed = originalBubbleSpeeds.get(bubble);
+        if (originalSpeed) {
+            bubble.dx = originalSpeed.dx;
+            bubble.dy = originalSpeed.dy;
+        } else {
+            bubble.dx *= 3.33;
+            bubble.dy *= 3.33;
         }
     });
-
     originalBubbleSpeeds.clear();
 }
 
@@ -384,13 +372,17 @@ function showPowerUpTimer(player, powerUpType) {
         document.body.appendChild(containerElement);
     }
 
-    // Create individual timer element for this powerup
-    const timerElement = document.createElement('div');
-    timerElement.className = 'powerup-timer';
-    timerElement.id = `powerup-timer-${player.id}-${powerUpType}`;
-
+    // Check if timer element for this powerup already exists
+    let timerElement = document.getElementById(`powerup-timer-${player.id}-${powerUpType}`);
     const powerUpName = getPowerUpDisplayName(powerUpType);
     const powerUpColor = getPowerUpColor(powerUpType);
+
+    if (!timerElement) {
+        timerElement = document.createElement('div');
+        timerElement.className = 'powerup-timer';
+        timerElement.id = `powerup-timer-${player.id}-${powerUpType}`;
+        containerElement.appendChild(timerElement);
+    }
 
     timerElement.innerHTML = `
         <div class="powerup-timer-content">
@@ -403,9 +395,6 @@ function showPowerUpTimer(player, powerUpType) {
             </div>
         </div>
     `;
-
-    // Add to container
-    containerElement.appendChild(timerElement);
 
     return timerElement;
 }

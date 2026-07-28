@@ -438,12 +438,17 @@ function clearGameObjects() {
     players.forEach(p => p.projectiles = []);
     particles.length = 0;
     powerUps.length = 0;
+    if (typeof floatingTexts !== 'undefined') floatingTexts.length = 0;
     obstacles = [];
     bubbles = [];
     
     // Clear rescue bubbles when clearing all game objects
     if (gameFunctions.clearAllRescueBubbles) {
         clearAllRescueBubbles();
+    }
+
+    if (typeof hidePowerUpTimer === 'function') {
+        hidePowerUpTimer();
     }
 }
 
@@ -463,10 +468,18 @@ function initializeLevel() {
 
 function togglePause() {
     isPaused = !isPaused;
+    gamePaused = isPaused;
     if (isPaused) {
         showPauseOverlay();
+        if (typeof stopBackgroundMusic === 'function') {
+            stopBackgroundMusic();
+        }
     } else {
         hidePauseOverlay();
+        if (typeof playBackgroundMusic === 'function') {
+            playBackgroundMusic();
+        }
+        lastFrameTime = 0;
         requestAnimationFrame(gameLoop);
     }
 }

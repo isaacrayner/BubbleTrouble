@@ -82,15 +82,11 @@ function projectileHitsBubble(projectile, bubble) {
 }
 
 function playerCollidesWith(playerObj, bubble) {
-    const playerCenterX = playerObj.x + playerObj.width / 2;
-    const playerCenterY = playerObj.y + playerObj.height / 2;
-    
-    const dx = playerCenterX - bubble.x;
-    const dy = playerCenterY - bubble.y;
-    const distanceSquared = dx * dx + dy * dy; // Skip Math.sqrt()
-    const radiusSum = Math.min(playerObj.width, playerObj.height) / 2 + bubble.radius;
-    
-    return distanceSquared < radiusSum * radiusSum; // Compare squared distances
+    const closestX = Math.max(playerObj.x, Math.min(bubble.x, playerObj.x + playerObj.width));
+    const closestY = Math.max(playerObj.y, Math.min(bubble.y, playerObj.y + playerObj.height));
+    const dx = bubble.x - closestX;
+    const dy = bubble.y - closestY;
+    return (dx * dx + dy * dy) < (bubble.radius * bubble.radius);
 }
 
 

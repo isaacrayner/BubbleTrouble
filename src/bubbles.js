@@ -34,14 +34,13 @@ class Bubble {
         this.type = type; // 'normal', 'golden', or 'boss'
         
         // --- MODIFICATION START ---
-        // Directly use BUBBLE_BASE_SPEED from the global scope for initial velocity calculations.
-        // This ensures that regardless of what 'speed' is passed, or what global BUBBLE_SPEED might be,
-        // the initial dx/dy are based on the original constant BUBBLE_BASE_SPEED.
-        const initialCalculationSpeed = (typeof BUBBLE_BASE_SPEED !== 'undefined') ? BUBBLE_BASE_SPEED : 2; // Default to 2 if undefined
+        // Use the level's configured speed as a multiplier so later levels really do
+        // move faster (the level UI has always advertised this, but it was ignored).
+        const levelSpeed = (typeof speed === 'number' && isFinite(speed) && speed > 0) ? speed : 1;
+        const initialCalculationSpeed = ((typeof BUBBLE_BASE_SPEED !== 'undefined') ? BUBBLE_BASE_SPEED : 2) * levelSpeed;
 
-        // You can still store the passed 'speed' if it's used for other logic,
-        // but it won't affect the initial dx/dy here.
-        this.currentBubbleSpeed = speed; 
+        // Store the level speed so split bubbles inherit it.
+        this.currentBubbleSpeed = levelSpeed;
 
         // Golden bubbles move 1.5x faster, boss bubbles move 1.2x faster
         const speedMultiplier = this.type === 'golden' ? 1.5 : (this.type === 'boss' ? 1.2 : 1.0);

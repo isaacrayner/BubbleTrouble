@@ -98,7 +98,7 @@ This game is configured for automatic deployment to Azure Static Web Apps.
    - **Region:** Choose closest to you (e.g., `East US 2`)
    - **Source:** GitHub
    - **Sign in with GitHub** → Authorize Azure
-   - **Organization:** `isaacery02`
+   - **Organization:** `isaacrayner`
    - **Repository:** `BubbleTrouble`
    - **Branch:** `main`
    - **Build Presets:** Custom
@@ -127,7 +127,7 @@ az group create --name BubbleTrouble-rg --location eastus2
 az staticwebapp create `
   --name bubble-trouble-game `
   --resource-group BubbleTrouble-rg `
-  --source https://github.com/isaacery02/BubbleTrouble `
+  --source https://github.com/isaacrayner/BubbleTrouble `
   --location eastus2 `
   --branch main `
   --app-location "/" `

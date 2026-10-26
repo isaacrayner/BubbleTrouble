@@ -170,12 +170,14 @@ function gameComplete() {
     
     // Calculate final scores
     const player1FinalScore = player1.score;
-    const player2FinalScore = (gameMode === 'multi' && player2) ? player2.score : 0;
+    const player2FinalScore = ((gameMode === 'multi' || gameMode === 'ai-coop') && player2) ? player2.score : 0;
     
     // Determine winner
     let winnerMessage = '';
     if (gameMode === 'single') {
         winnerMessage = `Your Final Score: ${player1FinalScore}`;
+    } else if (gameMode === 'ai-coop') {
+        winnerMessage = `Your Score: ${player1FinalScore}\nAI Score: ${player2FinalScore}\nTeam Total: ${player1FinalScore + player2FinalScore}`;
     } else {
         if (player1FinalScore > player2FinalScore) {
             winnerMessage = `Player 1 Wins!\nPlayer 1: ${player1FinalScore}\nPlayer 2: ${player2FinalScore}`;
@@ -185,11 +187,17 @@ function gameComplete() {
             winnerMessage = `It's a Tie!\nBoth scored: ${player1FinalScore}`;
         }
     }
+
+    // Record the high score for this completed run
+    const isNewHighScore = typeof updateHighScore === 'function' && updateHighScore();
+    const highScoreLine = isNewHighScore
+        ? `\n\n🏆 NEW HIGH SCORE! 🏆\nBest: ${highScore}`
+        : `\n\nBest: ${highScore}`;
     
     playSound('levelup'); // Use levelup sound for game completion
     
     showMessage(
-        `🎉 GAME COMPLETE! 🎉\n\nYou've beaten all 10 levels!\n\n${winnerMessage}\n\nCongratulations!`,
+        `🎉 GAME COMPLETE! 🎉\n\nYou've beaten all 10 levels!\n\n${winnerMessage}${highScoreLine}\n\nCongratulations!`,
         'Play Again',
         () => {
             hideMessage();

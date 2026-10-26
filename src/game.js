@@ -72,6 +72,8 @@ window.addEventListener('load', () => {
 function setupGame() {
     // Validate all game functions once at startup
     validateGameFunctions();
+
+    loadHighScore();
     
     // Initialize sound system first
     if (gameFunctions.initializeSounds) {
@@ -79,6 +81,44 @@ function setupGame() {
     }
     setupMobileControls();
     showModeSelectPrompt(); // Ask for game mode
+}
+
+// ========== HIGH SCORE PERSISTENCE ==========
+function loadHighScore() {
+    try {
+        const stored = parseInt(localStorage.getItem('bubbleTroubleHighScore'), 10);
+        highScore = Number.isFinite(stored) && stored > 0 ? stored : 0;
+    } catch (e) {
+        highScore = 0;
+    }
+}
+
+function saveHighScore() {
+    try {
+        localStorage.setItem('bubbleTroubleHighScore', String(highScore));
+    } catch (e) {
+        // localStorage can be unavailable (private mode); ignore.
+    }
+}
+
+function getCurrentBestScore() {
+    let best = player1.score || 0;
+    if ((gameMode === 'multi' || gameMode === 'ai-coop') && player2) {
+        best = Math.max(best, player2.score || 0);
+    }
+    return best;
+}
+
+// Returns true when the current run set a new record.
+function updateHighScore() {
+    const best = getCurrentBestScore();
+    if (best > highScore) {
+        highScore = best;
+        saveHighScore();
+        if (typeof updateScoreboard === 'function') updateScoreboard();
+        return true;
+    }
+    return false;
 }
 
 function showModeSelectPrompt() {
@@ -339,12 +379,15 @@ function checkGameOver() {
         }
         
         if (gameFunctions.playSound) playSound('gameover');
-        showGameOverMessage();
+
+        // Record the best score before showing the results
+        const isNewHighScore = updateHighScore();
+        showGameOverMessage(isNewHighScore);
     }
 }
 
 // Show game over message with scores
-function showGameOverMessage() {
+function showGameOverMessage(isNewHighScore = false) {
     let message = '';
     if (gameMode === 'single') {
         message = `Game Over!\n\nYour Score: ${player1.score}`;
@@ -363,6 +406,13 @@ function showGameOverMessage() {
             message += `It's a tie!\nBoth players scored: ${player1Score}`;
         }
     }
+
+    if (isNewHighScore) {
+        message += `\n\n🏆 NEW HIGH SCORE! 🏆\nBest: ${highScore}`;
+    } else {
+        message += `\n\nBest: ${highScore}`;
+    }
+
     showMessage(message, 'Play Again', () => {
         hideMessage();
         startNewGame();

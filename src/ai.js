@@ -83,29 +83,27 @@ function makeAIDecision() {
     // Check boundaries first - prevent going off screen
     if (aiPlayer && aiPlayer.x < 30) {
         // Too close to left edge, move right
-        keys['KeyA'] = false;
-        keys['KeyD'] = true;
+        setAIMovement(1);
         return;
     } else if (aiPlayer && aiPlayer.x + aiPlayer.width > canvas.width - 30) {
         // Too close to right edge, move left
-        keys['KeyA'] = true;
-        keys['KeyD'] = false;
+        setAIMovement(-1);
         return;
     }
 
-    // Decide action based on situation - prioritize offense over defense
+    // Decide action based on situation
     if (threats.immediate) {
         // Emergency evasion only for extremely close bubbles
         handleThreat(threats.immediate);
+    } else if (opportunities.rescue) {
+        // Prioritise reviving a downed teammate
+        handleRescue(opportunities.rescue);
     } else if (opportunities.bubbles.length > 0) {
         // Primary focus: shoot bubbles aggressively
         handleBubbles(opportunities.bubbles);
     } else if (opportunities.powerup) {
         // Go for power-up when no bubbles to shoot
         handlePowerUp(opportunities.powerup);
-    } else if (opportunities.rescue) {
-        // Help downed human player
-        handleRescue(opportunities.rescue);
     } else if (threats.nearby.length > 0) {
         // Only worry about nearby threats if nothing else to do
         handleNearbyThreats(threats.nearby);
@@ -132,8 +130,8 @@ function evaluateThreats() {
     const immediateRadius = 30; // Only emergency evasion for extremely close bubbles
 
     bubbles.forEach(bubble => {
-        const bubbleCenterX = bubble.x + bubble.radius;
-        const bubbleCenterY = bubble.y + bubble.radius;
+        const bubbleCenterX = bubble.x;
+        const bubbleCenterY = bubble.y;
         const distance = Math.hypot(bubbleCenterX - aiCenterX, bubbleCenterY - aiCenterY);
 
         if (distance < immediateRadius) {
@@ -218,8 +216,8 @@ function calculateBubblePriority(bubble) {
     // Bubbles near human player = higher priority (protective)
     if (player1 && player1.active) {
         const distToHuman = Math.hypot(
-            (bubble.x + bubble.radius) - (player1.x + player1.width / 2),
-            (bubble.y + bubble.radius) - (player1.y + player1.height / 2)
+            bubble.x - (player1.x + player1.width / 2),
+            bubble.y - (player1.y + player1.height / 2)
         );
         if (distToHuman < 200) {
             priority += (200 - distToHuman) / 50 * AI_CONFIG.helpfulness;
@@ -233,18 +231,16 @@ function calculateBubblePriority(bubble) {
 function handleThreat(threat) {
     if (!aiPlayer || !aiPlayer.active) return;
 
-    const bubbleX = threat.bubble.x + threat.bubble.radius;
+    const bubbleX = threat.bubble.x;
     const aiCenterX = aiPlayer.x + aiPlayer.width / 2;
 
     // Move away from bubble
     if (bubbleX > aiCenterX) {
         // Bubble on right, move left
-        keys['KeyA'] = true;
-        keys['KeyD'] = false;
+        setAIMovement(-1);
     } else {
         // Bubble on left, move right
-        keys['KeyA'] = false;
-        keys['KeyD'] = true;
+        setAIMovement(1);
     }
 
     // Try to shoot it while evading
@@ -258,7 +254,7 @@ function handleNearbyThreats(threats) {
     if (!aiPlayer || !aiPlayer.active || threats.length === 0) return;
 
     const closestThreat = threats[0];
-    const bubbleX = closestThreat.bubble.x + closestThreat.bubble.radius;
+    const bubbleX = closestThreat.bubble.x;
     const aiCenterX = aiPlayer.x + aiPlayer.width / 2;
     const horizontalDist = Math.abs(bubbleX - aiCenterX);
 
@@ -271,11 +267,9 @@ function handleNearbyThreats(threats) {
     } else {
         // Move to position
         if (bubbleX > aiCenterX) {
-            keys['KeyA'] = false;
-            keys['KeyD'] = true;
+            setAIMovement(1);
         } else {
-            keys['KeyA'] = true;
-            keys['KeyD'] = false;
+            setAIMovement(-1);
         }
     }
 }
@@ -284,7 +278,7 @@ function handleNearbyThreats(threats) {
 function handleRescue(rescueBubble) {
     if (!aiPlayer || !aiPlayer.active || !rescueBubble) return;
 
-    const rescueX = rescueBubble.x + rescueBubble.size;
+    const rescueX = rescueBubble.x;
     const aiCenterX = aiPlayer.x + aiPlayer.width / 2;
     const horizontalDist = Math.abs(rescueX - aiCenterX);
 
@@ -297,11 +291,9 @@ function handleRescue(rescueBubble) {
     } else {
         // Move toward rescue bubble
         if (rescueX > aiCenterX) {
-            keys['KeyA'] = false;
-            keys['KeyD'] = true;
+            setAIMovement(1);
         } else {
-            keys['KeyA'] = true;
-            keys['KeyD'] = false;
+            setAIMovement(-1);
         }
     }
 }
@@ -318,11 +310,9 @@ function handlePowerUp(powerup) {
         stopAIMovement();
     } else {
         if (powerupX > aiCenterX) {
-            keys['KeyA'] = false;
-            keys['KeyD'] = true;
+            setAIMovement(1);
         } else {
-            keys['KeyA'] = true;
-            keys['KeyD'] = false;
+            setAIMovement(-1);
         }
     }
 }
@@ -339,16 +329,13 @@ function handleBubbles(bubbleTargets) {
     // Move toward the bubble
     if (horizontalDist > 10) { // Small dead zone to prevent jitter
         if (bubbleX > aiCenterX) {
-            keys['KeyA'] = false;
-            keys['KeyD'] = true;
+            setAIMovement(1);
         } else {
-            keys['KeyA'] = true;
-            keys['KeyD'] = false;
+            setAIMovement(-1);
         }
     } else {
         // Stop moving when very close
-        keys['KeyA'] = false;
-        keys['KeyD'] = false;
+        stopAIMovement();
     }
 
     // Shoot whenever reasonably aligned (within 100px)
@@ -381,20 +368,16 @@ function handleDefaultPositioning() {
     if (dist < 30) {
         // Close enough to target, keep patrolling gently
         if (cyclePosition < 0.5) {
-            keys['KeyA'] = false;
-            keys['KeyD'] = true;
+            setAIMovement(1);
         } else {
-            keys['KeyA'] = true;
-            keys['KeyD'] = false;
+            setAIMovement(-1);
         }
     } else {
         // Move toward target
         if (targetX > aiCenterX) {
-            keys['KeyA'] = false;
-            keys['KeyD'] = true;
+            setAIMovement(1);
         } else {
-            keys['KeyA'] = true;
-            keys['KeyD'] = false;
+            setAIMovement(-1);
         }
     }
 }
@@ -427,10 +410,22 @@ function attemptAIShoot() {
     aiReactionDelay = Date.now() + AI_CONFIG.reactionTime;
 }
 
+// Set the AI player's movement direction (-1 left, 1 right, 0 stop).
+// The AI writes dx directly so it never fights the shared keyboard state.
+function setAIMovement(direction) {
+    if (!aiPlayer) return;
+    if (direction < 0) {
+        aiPlayer.dx = -aiPlayer.speed;
+    } else if (direction > 0) {
+        aiPlayer.dx = aiPlayer.speed;
+    } else {
+        aiPlayer.dx = 0;
+    }
+}
+
 // Stop AI movement
 function stopAIMovement() {
-    keys['KeyA'] = false;
-    keys['KeyD'] = false;
+    setAIMovement(0);
 }
 
 // Check if AI is near boundaries

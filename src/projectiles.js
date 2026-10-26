@@ -1,6 +1,11 @@
 // Projectile system
 
 function shootProjectile(playerObj) {
+    // Never fire while the game is paused, over, or showing a message overlay
+    if (!gameRunning || gamePaused || gameOver) {
+        return;
+    }
+
     const currentTime = Date.now();
 
     // Reduced cooldown from 500ms to 250ms (twice as fast)

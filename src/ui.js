@@ -41,7 +41,35 @@ function clearCanvas() {
 
 // Add the missing drawUI function
 function drawUI() {
+    updateScoreboard();
     drawLevelInfo();
+}
+
+// Keep the HTML scoreboard in sync with live gameplay.
+// Values are cached so we only touch the DOM when something actually changes.
+let lastScoreboardValues = { p1: null, p2: null, best: null };
+
+function updateScoreboard() {
+    const p1 = String(player1.score);
+    if (lastScoreboardValues.p1 !== p1) {
+        const el = document.getElementById('score1');
+        if (el) el.textContent = p1;
+        lastScoreboardValues.p1 = p1;
+    }
+
+    const p2 = String(player2.score);
+    if (lastScoreboardValues.p2 !== p2) {
+        const el = document.getElementById('score2');
+        if (el) el.textContent = p2;
+        lastScoreboardValues.p2 = p2;
+    }
+
+    const best = String(highScore);
+    if (lastScoreboardValues.best !== best) {
+        const el = document.getElementById('highScore');
+        if (el) el.textContent = best;
+        lastScoreboardValues.best = best;
+    }
 }
 
 function drawLevelInfo() {
@@ -53,7 +81,7 @@ function drawLevelInfo() {
     ctx.font = '16px Inter';
     ctx.textAlign = 'center';
     
-    const progressText = `Level ${currentLevel} - ${bubbles.length} bubbles remaining`;
+    const progressText = `Level ${currentLevel} - ${bubbles.length} bubbles remaining  •  Best: ${highScore}`;
     ctx.fillText(progressText, canvas.width / 2, 30);
     
     // Draw time challenge timer if active

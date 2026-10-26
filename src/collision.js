@@ -38,13 +38,8 @@ function detectCollisions() {
         
         bubbles.forEach(bubble => {
             if (playerCollidesWith(playerObj, bubble)) {
-                // Use handlePlayerHit instead of loseLife
+                // handlePlayerHit already plays the hit sound and effects
                 handlePlayerHit(playerObj, bubble);
-                
-                // Play hit sound
-                if (typeof playSound === 'function') {
-                    playSound('hit'); // or 'pop'
-                }
             }
         });
     });

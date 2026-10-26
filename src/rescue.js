@@ -189,11 +189,12 @@ function checkRescueBubbleCollisions() {
         const bubble = rescueBubbles[i];
         
         for (const player of alivePlayers) {
-            // Check collision with alive player
-            if (player.x < bubble.x + bubble.size/2 &&
-                player.x + player.width > bubble.x - bubble.size/2 &&
-                player.y < bubble.y + bubble.size/2 &&
-                player.y + player.height > bubble.y - bubble.size/2) {
+            // bubble.size is the star's outer radius (see drawStar), so use it directly
+            const radius = bubble.size;
+            if (player.x < bubble.x + radius &&
+                player.x + player.width > bubble.x - radius &&
+                player.y < bubble.y + radius &&
+                player.y + player.height > bubble.y - radius) {
                 
                 // Rescue the target player
                 rescuePlayer(bubble.targetPlayerId);
@@ -223,10 +224,11 @@ function checkProjectileRescueBubbleCollision(projectile) {
         const bubble = rescueBubbles[i];
         
         // Check collision between projectile and rescue bubble
-        if (projectile.x < bubble.x + bubble.size/2 &&
-            projectile.x + projectile.width > bubble.x - bubble.size/2 &&
-            projectile.y < bubble.y + bubble.size/2 &&
-            projectile.y + projectile.height > bubble.y - bubble.size/2) {
+        const radius = bubble.size;
+        if (projectile.x < bubble.x + radius &&
+            projectile.x + projectile.width > bubble.x - radius &&
+            projectile.y < bubble.y + radius &&
+            projectile.y + projectile.height > bubble.y - radius) {
             
             // Rescue the target player
             rescuePlayer(bubble.targetPlayerId);

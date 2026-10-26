@@ -14,6 +14,7 @@ let currentLevel = 1;
 let levelStartTime = 0;
 let levelTimeLimit = 0; // 0 means no time limit, >0 for challenge levels
 let isTimeChallengeLevel = false;
+let highScore = 0; // Best score, persisted to localStorage
 
 // ========== FRAME RATE CONTROL ==========
 let lastFrameTime = 0;

@@ -54,11 +54,11 @@ function updatePowerUps() {
             powerUp.pulsePhase += 0.1;
         }
 
-        // Apply physics - movement and gravity
-        powerUp.x += powerUp.dx;
-        powerUp.y += powerUp.dy;
-        powerUp.dy += 0.5; // Gravity
-        powerUp.dx *= 0.98; // Air resistance
+        // Apply physics - movement and gravity (delta-time normalized)
+        powerUp.x += powerUp.dx * deltaTime;
+        powerUp.y += powerUp.dy * deltaTime;
+        powerUp.dy += 0.5 * deltaTime; // Gravity
+        powerUp.dx *= Math.pow(0.98, deltaTime); // Air resistance
 
         // Bounce off canvas edges
         if (powerUp.x <= 0 || powerUp.x + powerUp.width >= canvas.width) {

@@ -66,7 +66,7 @@ function handleInput() {
         player1.dx = 0;
     }
 
-    if (gameMode === 'multi' || gameMode === 'ai-coop') {
+    if (gameMode === 'multi') {
         if (keys['KeyA'] && player2.active) {
             player2.dx = -player2.speed;
         } else if (keys['KeyD'] && player2.active) {
@@ -74,6 +74,9 @@ function handleInput() {
         } else if (player2.active) {
             player2.dx = 0;
         }
+    } else if (gameMode === 'ai-coop') {
+        // Player 2 is AI-controlled; its movement is set directly in ai.js.
+        // Do not read the shared keyboard here or the human would fight the AI.
     } else if (player2.active) { // Ensure P2 doesn't move if somehow active in single player
         player2.dx = 0;
     }

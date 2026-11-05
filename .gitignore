@@ -70,3 +70,5 @@ coverage/
 
 # Azure Static Web Apps
 .output/
+
+.wrangler/

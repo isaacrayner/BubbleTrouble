@@ -1,0 +1,11 @@
+.git
+.github
+.gitignore
+.assetsignore
+Dockerfile
+README.md
+nginx.conf
+staticwebapp.config.json
+wrangler.jsonc
+node_modules
+.wrangler

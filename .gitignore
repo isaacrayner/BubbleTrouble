@@ -51,7 +51,6 @@ build/
 out/
 
 # Deployment
-.azure/
 .vercel/
 .netlify/
 
@@ -67,8 +66,5 @@ coverage/
 # Backup Files
 *.bak
 *.backup
-
-# Azure Static Web Apps
-.output/
 
 .wrangler/
